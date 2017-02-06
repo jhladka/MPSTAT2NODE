@@ -130,11 +130,13 @@ def modify_mpstat_output(cpu_numa, cpu_nb, nodes_nb):
     # Subsequent reports are separated by blank line:
     while True:
 
-        if average_over_node(cpu_numa, cpu_nb, nodes_nb, STAT_COLUMNS) == "END":
+        status = average_over_node(cpu_numa, cpu_nb, nodes_nb, STAT_COLUMNS)
+        if status in ("END", "EOF"):
             break
 
     # Read and print final time statistics for nodes:
-    average_over_node(cpu_numa, cpu_nb, nodes_nb, STAT_COLUMNS)
+    if status == "END":
+        average_over_node(cpu_numa, cpu_nb, nodes_nb, STAT_COLUMNS)
 
 
 def average_over_node(cpu_numa, cpu_nb, nodes_nb, STAT_COLUMNS):
@@ -175,8 +177,13 @@ def average_over_node(cpu_numa, cpu_nb, nodes_nb, STAT_COLUMNS):
         output += '\n'
         stdout.write(output)
 
-    # Print blank line:
-    stdout.write(stdin.readline())
+    # Check for end of file without average values:
+    next_line = stdin.readline()
+    if next_line != '\n':
+        return 'EOF'
+
+    # If not end of file print blank line:
+    stdout.write(next_line)
 
 
 if __name__ == "__main__":

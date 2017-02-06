@@ -4,7 +4,7 @@
 """
 Read mpstat.log file and convert it by aggregating values across NUMA nodes.
 
-Read aggregation of CPUs from <lscpu> file.
+Read aggregation of CPUs from output of lscpu command.
 
 
 Copyright 2017, Jarmila Hladká

@@ -32,14 +32,23 @@ def get_input():
     import os
 
     # Parse input line:
-    usage = """./mpstat2node.py --lscpu <(lscpu) < mpstat.log\nor\
-        \nmpstat -P ALL 5 | ./mpstat2node.py --lscpu <(lscpu)\
-        \n\nOffline usage:\
-        \n1) Collect mpstat data\
-        \nlscpu > lscpu.txt\
-        \nmpstat -P ALL 5 > mpstat.txt\
-        \n2)Aggreagate mpstat data\
-        \n./mpstat2node.py --lscpu lscpu.txt < mpstat.txt"""
+    usage = """
+
+./mpstat2node.py --lscpu <(lscpu) < mpstat.log
+or
+mpstat -P ALL 5 | ./mpstat2node.py --lscpu <(lscpu)
+
+Process mpstat output on the fly for the mpstat process which is already running:
+1) nmpstat -P ALL 5 > mpstat.txt
+2) tail -f -n +1 mpstat.txt | mpstat2node.py --lscpu <(lscpu)
+
+Retrieve mpstat output from another machine:
+1) Collect mpstat data
+lscpu > lscpu.txt
+mpstat -P ALL 5 > mpstat.txt
+2) Aggreagate mpstat data
+./mpstat2node.py --lscpu lscpu.txt < mpstat.txt
+"""
 
     description = """Converts output of mpstat -P ALL <time_interval>
         by aggregating values for NUMA node."""

@@ -110,10 +110,13 @@ def CPU_NUMA(lscpu):
             stderr.write("Error in CPU - node association!\n")
             exit(1)
 
-    return cpu_numa, cpu_nb, nodes_nb
+        # Number of cpus on nodes:
+        cpu_on_node = [cpu_numa.values().count(str(node)) for node in range(nodes_nb)]
+
+    return cpu_numa, cpu_on_node, cpu_nb, nodes_nb
 
 
-def modify_mpstat_output(cpu_numa, cpu_nb, nodes_nb):
+def modify_mpstat_output(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
     """
     Read mpstas output from stdin and output average activities
     among nodes.
@@ -130,22 +133,21 @@ def modify_mpstat_output(cpu_numa, cpu_nb, nodes_nb):
     # Subsequent reports are separated by blank line:
     while True:
 
-        status = average_over_node(cpu_numa, cpu_nb, nodes_nb, STAT_COLUMNS)
+        status = average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, STAT_COLUMNS)
         if status in ("END", "EOF"):
             break
 
     # Read and print final time statistics for nodes:
     if status == "END":
-        average_over_node(cpu_numa, cpu_nb, nodes_nb, STAT_COLUMNS)
+        average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, STAT_COLUMNS)
 
 
-def average_over_node(cpu_numa, cpu_nb, nodes_nb, STAT_COLUMNS):
+def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, STAT_COLUMNS):
     """
     Read and print average statistics for one time interval report:
     """
 
     # Print description of columns:
-    #stdout.write('\n')
     columns = stdin.readline()
 
     # Check for final time averages at the end of file:
@@ -156,9 +158,7 @@ def average_over_node(cpu_numa, cpu_nb, nodes_nb, STAT_COLUMNS):
     stdout.write(stdin.readline())
 
     # List for statistics:
-    statistics = []
-    for i in range(STAT_COLUMNS):
-        statistics.append([[] for j in range(nodes_nb)])
+    statistics = [[0.0 for j in range(nodes_nb)] for i in range(STAT_COLUMNS)]
 
     # Read statistics for CPUs:
     for i in range(cpu_nb):
@@ -166,13 +166,13 @@ def average_over_node(cpu_numa, cpu_nb, nodes_nb, STAT_COLUMNS):
         words = line[11:].split()
         cpu = words[0]
         for col in range(STAT_COLUMNS):
-            statistics[col][int(cpu_numa[cpu])].append(float(words[col + 1]))
+            statistics[col][int(cpu_numa[cpu])] += float(words[col + 1])
 
     # Statistics over nodes:
     for node in range(nodes_nb):
         output = '{0}{1:5d}'.format(line[:11], node)
         for col in range(STAT_COLUMNS):
-            average = sum(statistics[col][node])/float(len(statistics[col][node]))
+            average = statistics[col][node]/cpu_on_node[node]
             output += '{:8.2f}'.format(average)
         output += '\n'
         stdout.write(output)
@@ -188,5 +188,5 @@ def average_over_node(cpu_numa, cpu_nb, nodes_nb, STAT_COLUMNS):
 
 if __name__ == "__main__":
 
-    cpu_numa, cpu_nb, nodes_nb = CPU_NUMA(get_input())
-    modify_mpstat_output(cpu_numa, cpu_nb, nodes_nb)
+    cpu_numa, cpu_on_node, cpu_nb, nodes_nb = CPU_NUMA(get_input())
+    modify_mpstat_output(cpu_numa, cpu_on_node, cpu_nb, nodes_nb)

@@ -122,9 +122,6 @@ def modify_mpstat_output(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
     among nodes.
     """
 
-    # Number of displayed CPU statistic values:
-    STAT_COLUMNS = 10
-
     # Print first two lines with system info:
     for i in range(2):
         stdout.write(stdin.readline())
@@ -133,16 +130,16 @@ def modify_mpstat_output(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
     # Subsequent reports are separated by blank line:
     while True:
 
-        status = average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, STAT_COLUMNS)
+        status = average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb)
         if status in ("END", "EOF"):
             break
 
     # Read and print final time statistics for nodes:
     if status == "END":
-        average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, STAT_COLUMNS)
+        average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb)
 
 
-def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, STAT_COLUMNS):
+def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
     """
     Read and print average statistics for one time interval report:
     """
@@ -154,6 +151,11 @@ def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, STAT_COLUMNS):
     if columns == '\n':
         stdout.write('\n')
         return 'END'
+
+    # Number of displayed CPU statistic values:
+    STAT_COLUMNS = columns.count('%')
+
+    # Write revised column labels:
     stdout.write('{0}{1}{2}'.format(columns[:12], 'NODE', columns[16:]))
     stdout.write(stdin.readline())
 

@@ -43,7 +43,7 @@ or
 mpstat -P ALL 5 | ./mpstat2node.py --lscpu <(lscpu)
 
 Process mpstat output on the fly for the mpstat process which is already running:
-1) nmpstat -P ALL 5 > mpstat.txt
+1) mpstat -P ALL 5 > mpstat.txt
 2) tail -f -n +1 mpstat.txt | mpstat2node.py --lscpu <(lscpu)
 
 Retrieve mpstat output from another machine:

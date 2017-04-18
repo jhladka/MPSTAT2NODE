@@ -67,7 +67,7 @@ mpstat -P ALL 5 > mpstat.txt
         if os.access(args.lscpu, os.R_OK):
             return args.lscpu
         else:
-            stderr.write("File {} doesn't exist!\n".format(args.lscpu))
+            stderr.write("File {0} doesn't exist!\n".format(args.lscpu))
             exit(1)
 
     # If lscpu file isn't specified:

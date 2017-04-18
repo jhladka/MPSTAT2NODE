@@ -175,7 +175,7 @@ def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
         output = '{0}{1:5d}'.format(line[:11], node)
         for col in range(STAT_COLUMNS):
             average = statistics[col][node]/cpu_on_node[node]
-            output += '{:8.2f}'.format(average)
+            output += '{0:8.2f}'.format(average)
         output += '\n'
         stdout.write(output)
 

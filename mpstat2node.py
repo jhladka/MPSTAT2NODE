@@ -90,20 +90,20 @@ def CPU_NUMA(lscpu):
             # Find number of CPUs and NUMA nodes:
             if line[:7] == 'CPU(s):':
                 cpu_nb = int(line[7:])
-            if line[:13] == 'NUMA node(s):':
+            elif line[:13] == 'NUMA node(s):':
                 nodes_nb = int(line[13:])
 
             # Find NUMA nodes associated with CPUs:
-            if line[:9] == 'NUMA node':
+            elif line[:9] == 'NUMA node':
                 words = line.split()
                 cpus = words[-1].split(',')
                 for cpu in cpus:
                     if '-' in cpu:
                         w = cpu.split('-')
                         for i in range(int(w[0]), int(w[1]) + 1):
-                            cpu_numa[str(i)] = words[1][-1:]
+                            cpu_numa[str(i)] = words[1][4:]
                     else:
-                        cpu_numa[cpu] = words[1][-1:]
+                        cpu_numa[cpu] = words[1][4:]
 
         # Check if all CPUs are associated with NUMA node:
         if len(cpu_numa) != cpu_nb:

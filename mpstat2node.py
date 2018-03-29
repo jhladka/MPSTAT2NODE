@@ -168,7 +168,9 @@ def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
         words = line[11:].split()
         cpu = words[0]
         for col in range(STAT_COLUMNS):
-            statistics[col][int(cpu_numa[cpu])] += float(words[col + 1])
+            #print repr(words[col + 1])
+            statistics[col][int(cpu_numa[cpu])] += float(words[col + 1].strip('\0'))
+
 
     # Statistics over nodes:
     for node in range(nodes_nb):

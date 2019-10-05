@@ -120,32 +120,46 @@ def modify_mpstat_output(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
     """
     Read mpstas output from stdin and output average activities
     among nodes.
+    Ignore any lines at the top of the file starting with #
     """
 
-    # Print first two lines with system info:
-    for i in range(2):
-        stdout.write(stdin.readline())
+    line = stdin.readline()
+    line_count = 1
+    while line.startswith("#"):
+        stderr.write(line)
+        line = stdin.readline()
+        line_count += 1
+
+    # Print the first line with the system info
+    stdout.write(line)
+    # Next line should be empty
+    line = stdin.readline()
+    line_count += 1
+    stdout.write(line)
+    if line != '\n':
+        stderr.write("WARN: Expecting line number " + str(line_count) + " to be empty, but it's not.\n")
 
     # Loop over time reports.
     # Subsequent reports are separated by blank line:
     while True:
 
-        status = average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb)
+        status = average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, line_count)
         if status in ("END", "EOF"):
             break
 
     # Read and print final time statistics for nodes:
     if status == "END":
-        average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb)
+        average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, line_count)
 
 
-def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
+def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, line_count):
     """
     Read and print average statistics for one time interval report:
     """
 
     # Print description of columns:
     columns = stdin.readline()
+    line_count += 1
 
     # Check for final time averages at the end of file:
     if columns == '\n':
@@ -158,6 +172,7 @@ def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
     # Write revised column labels:
     stdout.write('{0}{1}{2}'.format(columns[:12], 'NODE', columns[16:]))
     stdout.write(stdin.readline())
+    line_count += 1
 
     # List for statistics:
     statistics = [[0.0 for j in range(nodes_nb)] for i in range(STAT_COLUMNS)]
@@ -165,6 +180,7 @@ def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
     # Read statistics for CPUs:
     for i in range(cpu_nb):
         line = stdin.readline()
+        line_count += 1
         words = line[11:].split()
         cpu = words[0]
         for col in range(STAT_COLUMNS):
@@ -188,6 +204,7 @@ def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
 
     # If not end of file print blank line:
     stdout.write(next_line)
+    line_count += 1
 
 
 if __name__ == "__main__":

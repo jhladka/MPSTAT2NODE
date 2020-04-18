@@ -8,6 +8,7 @@ Read aggregation of CPUs from output of lscpu command.
 
 
 Copyright 2017, Jarmila Hladká
+Copyright 2020, Jirka Hladky, hladky DOT jiri AT gmail DOT com
 
 License:
 This program is free software: you can redistribute it and/or modify
@@ -25,7 +26,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from sys import stdin, stdout, stderr, exit
-
 
 def get_input():
     """
@@ -78,12 +78,13 @@ mpstat -P ALL 5 > mpstat.txt
 
 def CPU_NUMA(lscpu):
     """
-    Make a dictionnary of CPU's association with NUMA nodes.
+    Make a dictionary of CPU's association with NUMA nodes.
     """
 
     with open(lscpu) as lscpufile:
 
         cpu_numa = {}
+        numa_nodes_set = set()
 
         for line in lscpufile:
 
@@ -97,34 +98,50 @@ def CPU_NUMA(lscpu):
             elif line[:9] == 'NUMA node':
                 words = line.split()
                 cpus = words[-1].split(',')
+                numa_node = int(words[1][4:])
+                numa_nodes_set.add(numa_node)
                 for cpu in cpus:
                     if '-' in cpu:
                         w = cpu.split('-')
                         for i in range(int(w[0]), int(w[1]) + 1):
-                            cpu_numa[str(i)] = words[1][4:]
+                            cpu_numa[str(i)] = numa_node
                     else:
-                        cpu_numa[cpu] = words[1][4:]
+                        cpu_numa[cpu] = numa_node
 
         # Check if all CPUs are associated with NUMA node:
         if len(cpu_numa) != cpu_nb:
             stderr.write("Error in CPU - node association!\n")
             exit(1)
+        
+        # Create list of NUMA nodes sorted by value
+        numa_nodes = sorted(numa_nodes_set)
+
+        # Check if nodes_nb == len(numa_nodes)
+        if nodes_nb != len(numa_nodes):
+            stderr.write("Warning - nodes_nb " + str(nodes_nb) + " is different from len(numa_nodes) " + str(len(numa_nodes)) + " !\n")
+            stderr.write("          numa_nodes: " + " ".join(numa_nodes) + "\n")
 
         # Number of cpus on nodes:
-        cpu_on_node = [cpu_numa.values().count(str(node)) for node in range(nodes_nb)]
+        cpu_on_node = {}
+        for node in numa_nodes:
+            cpu_on_node[node] = cpu_numa.values().count(node)
 
-    return cpu_numa, cpu_on_node, cpu_nb, nodes_nb
+    return cpu_numa, cpu_on_node, cpu_nb, numa_nodes
 
 
 def modify_mpstat_output(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
     """
-    Read mpstas output from stdin and output average activities
+    Read mpstat output from stdin and output average activities
     among nodes.
     Ignore any lines at the top of the file starting with #
     """
 
     line = stdin.readline()
+    if not line:
+        stderr.write("WARN: Unexpected end of input file!\n")
+        exit(1)
     line_count = 1
+
     while line.startswith("#"):
         stderr.write(line)
         line = stdin.readline()
@@ -134,6 +151,9 @@ def modify_mpstat_output(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
     stdout.write(line)
     # Next line should be empty
     line = stdin.readline()
+    if not line:
+        stderr.write("WARN: Unexpected end of input file!\n")
+        exit(1)
     line_count += 1
     stdout.write(line)
     if line != '\n':
@@ -143,16 +163,16 @@ def modify_mpstat_output(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
     # Subsequent reports are separated by blank line:
     while True:
 
-        status = average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, line_count)
+        status = average_over_node(cpu_numa, cpu_on_node, cpu_nb, numa_nodes, line_count)
         if status in ("END", "EOF"):
             break
 
     # Read and print final time statistics for nodes:
     if status == "END":
-        average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, line_count)
+        average_over_node(cpu_numa, cpu_on_node, cpu_nb, numa_nodes, line_count)
 
 
-def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, line_count):
+def average_over_node(cpu_numa, cpu_on_node, cpu_nb, numa_nodes, line_count):
     """
     Read and print average statistics for one time interval report:
     """
@@ -174,8 +194,11 @@ def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, line_count):
     stdout.write(stdin.readline())
     line_count += 1
 
-    # List for statistics:
-    statistics = [[0.0 for j in range(nodes_nb)] for i in range(STAT_COLUMNS)]
+    # statistics - dictionary; key is the NUMA node number, value is the list of columns
+    statistics = {}
+    for key in numa_nodes:
+        statistics[key] = [0.0] * STAT_COLUMNS
+    #statistics = [[0.0 for j in range(len(numa_nodes))] for i in range(STAT_COLUMNS)]
 
     # Read statistics for CPUs:
     for i in range(cpu_nb):
@@ -185,14 +208,23 @@ def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, line_count):
         cpu = words[0]
         for col in range(STAT_COLUMNS):
             #print repr(words[col + 1])
-            statistics[col][int(cpu_numa[cpu])] += float(words[col + 1].strip('\0'))
+            #try:
+            statistics[cpu_numa[cpu]][col] += float(words[col + 1].strip('\0'))
+            #except Exception as e:
+            #    print str(e)
+            #    print "col, cpu, node", col,cpu,cpu_numa[cpu]
+                #print line
+                
 
 
     # Statistics over nodes:
-    for node in range(nodes_nb):
+    for node in numa_nodes:
         output = '{0}{1:5d}'.format(line[:11], node)
         for col in range(STAT_COLUMNS):
-            average = statistics[col][node]/cpu_on_node[node]
+            #print "node, col", node, col
+            #print statistics[node][col]
+            #print cpu_on_node[node]
+            average = statistics[node][col]/cpu_on_node[node]
             output += '{0:8.2f}'.format(average)
         output += '\n'
         stdout.write(output)
@@ -209,5 +241,5 @@ def average_over_node(cpu_numa, cpu_on_node, cpu_nb, nodes_nb, line_count):
 
 if __name__ == "__main__":
 
-    cpu_numa, cpu_on_node, cpu_nb, nodes_nb = CPU_NUMA(get_input())
-    modify_mpstat_output(cpu_numa, cpu_on_node, cpu_nb, nodes_nb)
+    cpu_numa, cpu_on_node, cpu_nb, numa_nodes = CPU_NUMA(get_input())
+    modify_mpstat_output(cpu_numa, cpu_on_node, cpu_nb, numa_nodes)

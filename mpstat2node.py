@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from sys import stdin, stdout, stderr, exit
+import re
 
 def get_input():
     """
@@ -84,6 +85,7 @@ def CPU_NUMA(lscpu):
     with open(lscpu) as lscpufile:
 
         cpu_numa = {}
+        NUMA_re=re.compile(r'NUMA.*CPU\(s\):')
         numa_nodes_set = set()
 
         for line in lscpufile:
@@ -95,7 +97,7 @@ def CPU_NUMA(lscpu):
                 nodes_nb = int(line[13:])
 
             # Find NUMA nodes associated with CPUs:
-            elif line[:9] == 'NUMA node':
+            elif NUMA_re.search(line):
                 words = line.split()
                 cpus = words[-1].split(',')
                 numa_node = int(words[1][4:])

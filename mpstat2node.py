@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 """
@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from sys import stdin, stdout, stderr, exit
 import re
 
+
 def get_input():
     """
     Parse and validate input line.
@@ -43,7 +44,7 @@ def get_input():
 or
 mpstat -P ALL 5 | ./mpstat2node.py --lscpu <(lscpu)
 
-Process mpstat output on the fly for the mpstat process which is already running:
+Process mpstat output on the fly for the already running mpstat process:
 1) mpstat -P ALL 5 > mpstat.txt
 2) tail -f -n +1 mpstat.txt | mpstat2node.py --lscpu <(lscpu)
 
@@ -85,7 +86,7 @@ def CPU_NUMA(lscpu):
     with open(lscpu) as lscpufile:
 
         cpu_numa = {}
-        NUMA_re=re.compile(r'NUMA.*CPU\(s\):')
+        NUMA_re = re.compile(r'NUMA.*CPU\(s\):')
         numa_nodes_set = set()
 
         for line in lscpufile:
@@ -114,7 +115,7 @@ def CPU_NUMA(lscpu):
         if len(cpu_numa) != cpu_nb:
             stderr.write("Error in CPU - node association!\n")
             exit(1)
-        
+
         # Create list of NUMA nodes sorted by value
         numa_nodes = sorted(numa_nodes_set)
 
@@ -126,7 +127,7 @@ def CPU_NUMA(lscpu):
         # Number of cpus on nodes:
         cpu_on_node = {}
         for node in numa_nodes:
-            cpu_on_node[node] = cpu_numa.values().count(node)
+            cpu_on_node[node] = list(cpu_numa.values()).count(node)
 
     return cpu_numa, cpu_on_node, cpu_nb, numa_nodes
 
@@ -159,7 +160,8 @@ def modify_mpstat_output(cpu_numa, cpu_on_node, cpu_nb, nodes_nb):
     line_count += 1
     stdout.write(line)
     if line != '\n':
-        stderr.write("WARN: Expecting line number " + str(line_count) + " to be empty, but it's not.\n")
+        stderr.write("WARN: Expecting line number " + str(line_count) +
+                     " to be empty, but it's not.\n")
 
     # Loop over time reports.
     # Subsequent reports are separated by blank line:
@@ -200,7 +202,7 @@ def average_over_node(cpu_numa, cpu_on_node, cpu_nb, numa_nodes, line_count):
     statistics = {}
     for key in numa_nodes:
         statistics[key] = [0.0] * STAT_COLUMNS
-    #statistics = [[0.0 for j in range(len(numa_nodes))] for i in range(STAT_COLUMNS)]
+    # statistics = [[0.0 for j in range(len(numa_nodes))] for i in range(STAT_COLUMNS)]
 
     # Read statistics for CPUs:
     for i in range(cpu_nb):
@@ -209,23 +211,21 @@ def average_over_node(cpu_numa, cpu_on_node, cpu_nb, numa_nodes, line_count):
         words = line[11:].split()
         cpu = words[0]
         for col in range(STAT_COLUMNS):
-            #print repr(words[col + 1])
-            #try:
+            # print repr(words[col + 1])
+            # try:
             statistics[cpu_numa[cpu]][col] += float(words[col + 1].strip('\0'))
-            #except Exception as e:
+            # except Exception as e:
             #    print str(e)
             #    print "col, cpu, node", col,cpu,cpu_numa[cpu]
-                #print line
-                
-
+            #    print line
 
     # Statistics over nodes:
     for node in numa_nodes:
         output = '{0}{1:5d}'.format(line[:11], node)
         for col in range(STAT_COLUMNS):
-            #print "node, col", node, col
-            #print statistics[node][col]
-            #print cpu_on_node[node]
+            # print "node, col", node, col
+            # print statistics[node][col]
+            # print cpu_on_node[node]
             average = statistics[node][col]/cpu_on_node[node]
             output += '{0:8.2f}'.format(average)
         output += '\n'
